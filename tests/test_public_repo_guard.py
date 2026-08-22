@@ -60,6 +60,20 @@ def test_clean_reserved_examples_pass(tmp_path: Path) -> None:
     assert "privacy gate passed" in result.stdout
 
 
+def test_standard_git_ssh_remote_is_not_treated_as_personal_email(
+    tmp_path: Path,
+) -> None:
+    repo = _repo(tmp_path)
+    (repo / "README.md").write_text(
+        "Clone with git@github.com:example/repository.git\n", encoding="utf-8"
+    )
+    _commit(repo)
+
+    result = _scan(repo)
+
+    assert result.returncode == 0
+
+
 @pytest.mark.parametrize(
     ("path", "content", "category"),
     [

@@ -73,6 +73,9 @@ REVIEWED_BINARY_ALLOWLIST = {
     "industry-check.png": "f54067362754e8f1cd17c7cf649bf72df98264099fd15571118a2000fd2929d9",
 }
 REVIEWED_EMAIL_ALLOWLIST = {
+    "git@bitbucket.org",
+    "git@github.com",
+    "git@gitlab.com",
     "raw-thread@outlook.de",
     "sensitive-thread@outlook.de",
 }
