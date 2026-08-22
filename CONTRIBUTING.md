@@ -21,6 +21,24 @@ uv run python -m pytest
 uv build
 ```
 
+Vor einem öffentlichen Push, Tag oder Release ist zusätzlich der vollständige Gate verpflichtend:
+
+```bash
+uv run job-agent init
+uv run python scripts/prepublish_audit.py
+```
+
+Nach dem Push wird der öffentliche Zustand aus einem anonymen Mirror geprüft:
+
+```bash
+uv run python scripts/prepublish_audit.py \
+  --remote-only \
+  --remote-url https://github.com/OWNER/REPOSITORY.git \
+  --github-repo OWNER/REPOSITORY
+```
+
+Der Ablauf und die Ursachen der früheren Schutzlücke sind in [docs/publication-safety.md](docs/publication-safety.md) dokumentiert.
+
 ## Anforderungen an Beiträge
 
 - Keine echten Kandidatenprofile, Lebensläufe, Anschreiben, Kontaktdaten oder Portalzugänge committen.

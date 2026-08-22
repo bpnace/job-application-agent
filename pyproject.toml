@@ -1,7 +1,7 @@
 [project]
 name = "job-application-agent"
-version = "0.3.0"
-description = "Portable, controlled job discovery and approved public-form application agent."
+version = "0.3.1"
+description = "Privacy-first German job search and controlled public-form application CLI."
 readme = "README.md"
 license = "AGPL-3.0-only"
 requires-python = ">=3.10,<3.14"

@@ -144,7 +144,7 @@ def test_mail_response_fallback_source_url_uses_opaque_mail_token(tmp_path):
         {
             "classification": "response_received",
             "message_id": "AAMk-sensitive-graph-id",
-            "internet_message_id": "<sensitive-thread@outlook.de>",
+            "internet_message_id": "<sensitive-thread@example.invalid>",
             "company": "Opaque GmbH",
             "title": "AI Engineer",
         },
@@ -155,10 +155,10 @@ def test_mail_response_fallback_source_url_uses_opaque_mail_token(tmp_path):
 
     assert event["source_url"].startswith("mail-response:")
     assert "AAMk-sensitive-graph-id" not in event["source_url"]
-    assert "sensitive-thread@outlook.de" not in event["source_url"]
+    assert "sensitive-thread@example.invalid" not in event["source_url"]
     assert event["reply_events"][0]["id"].startswith("mail-event:")
     assert "AAMk-sensitive-graph-id" not in event["reply_events"][0]["id"]
-    assert "sensitive-thread@outlook.de" not in event["reply_events"][0]["id"]
+    assert "sensitive-thread@example.invalid" not in event["reply_events"][0]["id"]
 
 
 def test_sent_application_from_outlook_marks_applied(tmp_path):
@@ -235,7 +235,7 @@ def test_company_only_payload_ignores_review_only_tracker_entries(tmp_path):
                 "status_at": "2026-06-25T10:00:00Z",
                 "company": "Capmo",
                 "title": "Unmatched Outlook response",
-                "source_url": "mail-response:<raw-thread@outlook.de>",
+                "source_url": "mail-response:<raw-thread@example.invalid>",
             }
         )
         + "\n",

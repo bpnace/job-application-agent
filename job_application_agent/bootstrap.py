@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import importlib.metadata
 import re
+import subprocess
 from pathlib import Path
 from typing import Any, Callable
 
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 
 import yaml
 
@@ -39,6 +40,7 @@ def initialize_local_state(
         home / "humanizer",
         home / "humanizer" / "public",
         home / "output",
+        home / "privacy",
         home / "runs",
     ]:
         directory.mkdir(parents=True, exist_ok=True)
@@ -73,6 +75,8 @@ def initialize_local_state(
         else:
             generated_cv_path = _write_interactive_setup(home, input_fn=input_fn)
             interactive_status = "completed"
+    privacy_blocklist_path = _refresh_privacy_blocklist(home)
+    _configure_repository_pre_push_hook(home)
     return {
         "agent_home": str(home),
         "profile_path": str(profile_path),
@@ -81,6 +85,7 @@ def initialize_local_state(
         "search_profile_created": search_profile_created,
         "interactive_setup": interactive_status,
         "generated_cv_path": generated_cv_path,
+        "privacy_blocklist_path": str(privacy_blocklist_path),
         "tracker_path": str(home / "data" / "applications.jsonl"),
     }
 
@@ -93,7 +98,9 @@ def _write_interactive_setup(home: Path, *, input_fn: Callable[[str], str]) -> s
     country = _ask(input_fn, "Zielland", default="Deutschland")
     city = _ask(input_fn, "Wohnort oder bevorzugte Stadt (optional)")
     location = ", ".join(part for part in [city, country] if part)
-    target_roles = _ask_list(input_fn, "Gewünschte Positionen/Titel (kommagetrennt)", required=True)
+    target_roles = _ask_list(
+        input_fn, "Gewünschte Positionen/Titel (kommagetrennt)", required=True
+    )
     keywords = _ask_list(
         input_fn,
         "Zusätzliche Suchbegriffe (kommagetrennt, Enter übernimmt Titel)",
@@ -107,18 +114,26 @@ def _write_interactive_setup(home: Path, *, input_fn: Callable[[str], str]) -> s
     employer_blacklist = _ask_list(
         input_fn, "Ausgeschlossene Arbeitgeber (kommagetrennt, optional)"
     )
-    remote_allowed = _ask(input_fn, "Remote oder hybrid zulassen? (ja/nein)", default="ja")
+    remote_allowed = _ask(
+        input_fn, "Remote oder hybrid zulassen? (ja/nein)", default="ja"
+    )
     summary = _ask_required(
         input_fn, "Kurze sachliche Profilzusammenfassung für Anschreiben"
     )
     core_skills = _ask_list(input_fn, "Kernkompetenzen (kommagetrennt)")
     proof_points = _ask_list(
-        input_fn, "Belegte Erfolge/Arbeitsproben (durch Semikolon getrennt)", separator=";"
+        input_fn,
+        "Belegte Erfolge/Arbeitsproben (durch Semikolon getrennt)",
+        separator=";",
     )
     github = _ask(input_fn, "GitHub-URL (optional)")
     linkedin = _ask(input_fn, "LinkedIn-URL (optional)")
     existing_cv = _is_yes(
-        _ask(input_fn, "Bestehenden Lebenslauf als PDF verwenden? (ja/nein)", default="nein")
+        _ask(
+            input_fn,
+            "Bestehenden Lebenslauf als PDF verwenden? (ja/nein)",
+            default="nein",
+        )
     )
     if existing_cv:
         cv_text_path = _ask(
@@ -197,6 +212,140 @@ def _write_interactive_setup(home: Path, *, input_fn: Callable[[str], str]) -> s
     return str(generated.pdf_path)
 
 
+def _refresh_privacy_blocklist(home: Path) -> Path:
+    """Derive identity-specific publication tripwires from ignored local state."""
+    target = home / "privacy" / "blocklist.txt"
+    candidate_path = home / "candidate.yaml"
+    candidate = yaml.safe_load(candidate_path.read_text(encoding="utf-8")) or {}
+    profile = candidate.get("profile", {}) if isinstance(candidate, dict) else {}
+    values = [Path.home().name]
+    if isinstance(profile, dict):
+        values.extend(
+            str(profile.get(key, ""))
+            for key in (
+                "name",
+                "email",
+                "phone",
+                "address",
+                "street_address",
+                "postal_code",
+                "github",
+                "linkedin",
+            )
+        )
+    documents = candidate.get("documents", {}) if isinstance(candidate, dict) else {}
+    if isinstance(documents, dict):
+        for configured_path in documents.values():
+            if isinstance(configured_path, str) and configured_path.strip():
+                values.extend(_privacy_filename_terms(Path(configured_path)))
+    for document_directory in (
+        home / "documents",
+        ROOT / ".playwright-mcp" / "uploads",
+        ROOT / ".playwright-cli" / "uploads",
+    ):
+        if document_directory.is_dir():
+            for local_file in document_directory.iterdir():
+                if local_file.is_file():
+                    values.extend(_privacy_filename_terms(local_file))
+    if target.is_file():
+        values.extend(
+            line.strip()
+            for line in target.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        )
+    normalized = sorted(
+        {
+            value.strip()
+            for value in values
+            if len(value.strip()) >= 4 and not _is_placeholder_privacy_value(value)
+        },
+        key=str.casefold,
+    )
+    target.write_text(
+        "# Private publication tripwires. Never commit this file.\n"
+        + "\n".join(normalized)
+        + ("\n" if normalized else ""),
+        encoding="utf-8",
+    )
+    target.chmod(0o600)
+    return target
+
+
+def _is_placeholder_privacy_value(value: str) -> bool:
+    lowered = value.strip().casefold()
+    if lowered.rstrip("/") in {
+        "github.com",
+        "www.github.com",
+        "linkedin.com",
+        "www.linkedin.com",
+    }:
+        return True
+    parsed = urlparse(lowered)
+    if parsed.hostname in {"github.com", "www.github.com"} and parsed.path in {"", "/"}:
+        return True
+    if parsed.hostname in {"linkedin.com", "www.linkedin.com"} and parsed.path in {
+        "",
+        "/",
+        "/in",
+        "/in/",
+    }:
+        return True
+    return any(
+        marker in lowered
+        for marker in (
+            "example.",
+            "beispiel.",
+            "your name",
+            "your-name",
+            "your_",
+            "your-",
+            "/your",
+            "placeholder",
+        )
+    )
+
+
+def _privacy_filename_terms(path: Path) -> list[str]:
+    stem = path.stem.strip()
+    generic = {
+        "application",
+        "anschreiben",
+        "attachment",
+        "bewerbung",
+        "certificate",
+        "cover",
+        "document",
+        "lebenslauf",
+        "letter",
+        "portfolio",
+        "resume",
+        "zeugnis",
+    }
+    terms = [stem] if len(stem) >= 4 and stem.casefold() not in generic else []
+    terms.extend(
+        token
+        for token in re.split(r"[_\-\s.]+", stem)
+        if len(token) >= 4 and token.casefold() not in generic and not token.isdigit()
+    )
+    return terms
+
+
+def _configure_repository_pre_push_hook(home: Path) -> None:
+    """Enable the versioned privacy hook only for this source checkout."""
+    hook = ROOT / ".githooks" / "pre-push"
+    try:
+        home.relative_to(ROOT)
+    except ValueError:
+        return
+    if not (ROOT / ".git").exists() or not hook.is_file():
+        return
+    subprocess.run(
+        ["git", "-C", str(ROOT), "config", "core.hooksPath", ".githooks"],
+        check=True,
+        capture_output=True,
+    )
+
+
 def _empty_resume() -> dict[str, object]:
     return {
         "accent_color": "#7A3E38",
@@ -219,7 +368,9 @@ def _ask_basic_resume(
 ) -> dict[str, object]:
     """Collect factual CV data only when no prior CV is available locally."""
     resume = _empty_resume()
-    resume["headline"] = _ask(input_fn, "Berufsbezeichnung im Lebenslauf", default=summary)
+    resume["headline"] = _ask(
+        input_fn, "Berufsbezeichnung im Lebenslauf", default=summary
+    )
     resume["summary"] = _ask(
         input_fn,
         "Kurzprofil im Lebenslauf (Enter übernimmt die Profilzusammenfassung)",
@@ -236,7 +387,9 @@ def _ask_basic_resume(
 
 def _ask_experience(input_fn: Callable[[str], str]) -> list[dict[str, object]]:
     entries: list[dict[str, object]] = []
-    while _is_yes(_ask(input_fn, "Berufserfahrung hinzufügen? (ja/nein)", default="nein")):
+    while _is_yes(
+        _ask(input_fn, "Berufserfahrung hinzufügen? (ja/nein)", default="nein")
+    ):
         entries.append(
             {
                 "role": _ask_required(input_fn, "  Rolle"),
@@ -255,7 +408,9 @@ def _ask_experience(input_fn: Callable[[str], str]) -> list[dict[str, object]]:
 
 def _ask_education(input_fn: Callable[[str], str]) -> list[dict[str, object]]:
     entries: list[dict[str, object]] = []
-    while _is_yes(_ask(input_fn, "Ausbildung oder Studium hinzufügen? (ja/nein)", default="nein")):
+    while _is_yes(
+        _ask(input_fn, "Ausbildung oder Studium hinzufügen? (ja/nein)", default="nein")
+    ):
         entries.append(
             {
                 "degree": _ask_required(input_fn, "  Abschluss oder Ausbildung"),
@@ -338,8 +493,16 @@ def _is_yes(value: str) -> bool:
 
 
 def _slug(value: str) -> str:
-    text = value.casefold().replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
-    return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", text)).strip("-") or "deutschland"
+    text = (
+        value.casefold()
+        .replace("ä", "ae")
+        .replace("ö", "oe")
+        .replace("ü", "ue")
+        .replace("ß", "ss")
+    )
+    return (
+        re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", text)).strip("-") or "deutschland"
+    )
 
 
 def _search_settings(
@@ -380,7 +543,11 @@ def _sources_for_search(
     *, country: str, city: str, target_roles: list[str], keywords: list[str]
 ) -> dict[str, Any]:
     location = ", ".join(part for part in [city, country] if part) or country
-    country_slug = "deutschland" if country.casefold() in {"deutschland", "germany"} else _slug(country)
+    country_slug = (
+        "deutschland"
+        if country.casefold() in {"deutschland", "germany"}
+        else _slug(country)
+    )
     portal_roles = target_roles[:8]
     public_queries = [f"{role} {location}" for role in portal_roles]
     public_queries.extend(
@@ -472,7 +639,10 @@ def _check_browser() -> tuple[bool, str]:
     try:
         from playwright.sync_api import Error, sync_playwright
     except ImportError:
-        return False, "Playwright Python package is not installed. Run `uv sync --frozen --all-groups`."
+        return (
+            False,
+            "Playwright Python package is not installed. Run `uv sync --frozen --all-groups`.",
+        )
 
     try:
         with sync_playwright() as playwright:
@@ -486,7 +656,10 @@ def _check_browser() -> tuple[bool, str]:
             f"Details: {str(exc).splitlines()[0][:180]}"
         )
     except Exception as exc:
-        return False, f"Playwright browser check failed: {str(exc).splitlines()[0][:180]}"
+        return (
+            False,
+            f"Playwright browser check failed: {str(exc).splitlines()[0][:180]}",
+        )
     return True, "Chromium launch succeeded."
 
 
@@ -497,7 +670,9 @@ def doctor_report() -> dict[str, Any]:
     checks["profile_config"] = {
         "ok": profile_path.is_file(),
         "path": str(profile_path),
-        "message": "Candidate configuration exists." if profile_path.is_file() else "Run `job-agent init` to create candidate.yaml.",
+        "message": "Candidate configuration exists."
+        if profile_path.is_file()
+        else "Run `job-agent init` to create candidate.yaml.",
     }
     if profile_path.is_file():
         try:
@@ -508,10 +683,13 @@ def doctor_report() -> dict[str, Any]:
                 "message": "Candidate configuration parsed without revealing its values.",
             }
             checks["documents"] = {
-                "ok": bool(profile.cv_excerpt) and bool(profile.humanizer_excerpt) and paths["cv_pdf"].is_file(),
+                "ok": bool(profile.cv_excerpt)
+                and bool(profile.humanizer_excerpt)
+                and paths["cv_pdf"].is_file(),
                 "cv_text": paths["cv_text"].is_file(),
                 "cv_pdf": paths["cv_pdf"].is_file(),
-                "humanizer": paths["humanizer"].is_file() and bool(profile.humanizer_excerpt),
+                "humanizer": paths["humanizer"].is_file()
+                and bool(profile.humanizer_excerpt),
                 "message": "Document paths checked; document contents are not printed.",
             }
             private_policy = load_private_policy(paths["humanizer"])
@@ -529,8 +707,14 @@ def doctor_report() -> dict[str, Any]:
                 "message": f"Candidate configuration is invalid: {str(exc).splitlines()[0][:180]}",
             }
     else:
-        checks["profile_schema"] = {"ok": False, "message": "Profile configuration is missing."}
-        checks["documents"] = {"ok": False, "message": "Profile configuration is missing."}
+        checks["profile_schema"] = {
+            "ok": False,
+            "message": "Profile configuration is missing.",
+        }
+        checks["documents"] = {
+            "ok": False,
+            "message": "Profile configuration is missing.",
+        }
         checks["humanizer"] = {
             "ok": False,
             "private_status": "not_configured",

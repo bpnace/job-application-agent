@@ -20,7 +20,7 @@ def _profile() -> CandidateProfile:
         name="Test Candidate",
         email="candidate@example.com",
         location="Berlin",
-        phone="+49 151 234 56789",
+        phone="+49 30 000000",
         address="Musterstraße 1, 10115 Berlin",
         street_address="Musterstraße 1",
         postal_code="10115",

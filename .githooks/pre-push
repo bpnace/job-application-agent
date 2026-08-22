@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+
+repository_root=$(git rev-parse --show-toplevel)
+zero_sha=0000000000000000000000000000000000000000
+
+while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
+    _unused_refs="$local_ref $remote_ref $remote_sha"
+    if [ "$local_sha" = "$zero_sha" ]; then
+        continue
+    fi
+    uv run python "$repository_root/scripts/check_public_repo.py" \
+        --repo "$repository_root" \
+        --ref "$local_sha" \
+        --history \
+        --require-private-blocklist
+done

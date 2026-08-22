@@ -22,6 +22,20 @@ def test_init_creates_ignored_layout_without_replacing_profile(tmp_path):
     assert profile_path.read_text(encoding="utf-8") == "profile: {}\ndocuments: {}\n"
     assert (tmp_path / "agent-home" / "approvals").is_dir()
     assert (tmp_path / "agent-home" / "humanizer" / "private.de.md").is_file()
+    assert (tmp_path / "agent-home" / "privacy").is_dir()
+
+
+def test_init_outside_source_checkout_does_not_modify_git_config(monkeypatch, tmp_path):
+    calls: list[list[str]] = []
+    monkeypatch.setattr(
+        bootstrap.subprocess,
+        "run",
+        lambda command, **_kwargs: calls.append(command),
+    )
+
+    bootstrap.initialize_local_state(agent_home=tmp_path / "agent-home")
+
+    assert calls == []
 
 
 def test_interactive_init_creates_private_candidate_and_search_profiles(tmp_path):
@@ -59,6 +73,9 @@ def test_interactive_init_creates_private_candidate_and_search_profiles(tmp_path
     search = yaml.safe_load(
         (tmp_path / "agent-home" / "search_profile.yaml").read_text(encoding="utf-8")
     )
+    privacy_blocklist = (
+        tmp_path / "agent-home" / "privacy" / "blocklist.txt"
+    ).read_text(encoding="utf-8")
 
     assert result["interactive_setup"] == "completed"
     assert profile["profile"]["name"] == "Example User"
@@ -71,9 +88,13 @@ def test_interactive_init_creates_private_candidate_and_search_profiles(tmp_path
     assert any(
         "Product+Manager" in url for url in search["sources"]["linkedin"]["urls"]
     )
+    assert "Example User" in privacy_blocklist
+    assert "user@example.test" not in privacy_blocklist
 
 
-def test_interactive_init_without_cv_creates_a_classic_basic_resume(tmp_path, monkeypatch):
+def test_interactive_init_without_cv_creates_a_classic_basic_resume(
+    tmp_path, monkeypatch
+):
     monkeypatch.delenv("JOB_AGENT_CV_PDF_PATH", raising=False)
     monkeypatch.delenv("JOB_AGENT_CV_TEXT_PATH", raising=False)
     answers = iter(
@@ -131,7 +152,9 @@ def test_interactive_init_without_cv_creates_a_classic_basic_resume(tmp_path, mo
 
 
 def test_doctor_reports_readiness_without_profile_values(monkeypatch, capsys, tmp_path):
-    monkeypatch.setattr(bootstrap, "_check_browser", lambda: (True, "Fixture browser ready."))
+    monkeypatch.setattr(
+        bootstrap, "_check_browser", lambda: (True, "Fixture browser ready.")
+    )
 
     # The production doctor always uses ignored local state.  Build that state
     # explicitly so this test does not depend on a developer's real profile.
@@ -157,9 +180,7 @@ def test_doctor_reports_readiness_without_profile_values(monkeypatch, capsys, tm
     (home / "documents" / "cv.txt").write_text("Test CV", encoding="utf-8")
     (home / "documents" / "cv.pdf").write_bytes(b"%PDF-1.4\n%%EOF\n")
     search = yaml.safe_load((home / "search_profile.yaml").read_text(encoding="utf-8"))
-    search["search"].update(
-        {"profile_configured": True, "target_roles": ["Test Role"]}
-    )
+    search["search"].update({"profile_configured": True, "target_roles": ["Test Role"]})
     (home / "search_profile.yaml").write_text(
         yaml.safe_dump(search, sort_keys=False), encoding="utf-8"
     )
@@ -198,7 +219,9 @@ def test_humanizer_bootstrap_pins_and_locks_public_baseline(monkeypatch, tmp_pat
     first = humanizer_policy.bootstrap_public_baseline(tmp_path / "agent-home")
     second = humanizer_policy.bootstrap_public_baseline(tmp_path / "agent-home")
     lock = json.loads(
-        (tmp_path / "agent-home" / "humanizer" / "public" / "baseline.lock.json").read_text()
+        (
+            tmp_path / "agent-home" / "humanizer" / "public" / "baseline.lock.json"
+        ).read_text()
     )
 
     assert first["downloaded"] is True

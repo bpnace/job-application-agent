@@ -9,7 +9,7 @@
 
 Ein lokaler, kontrollierter Bewerbungsagent für die öffentliche Stellensuche in Deutschland. Er erstellt aus einem **privaten Such- und Kandidatenprofil** eine prüfbare Shortlist, Bewerbungspakete und – nach einer konkreten Freigabe – eine eng begrenzte Browser-Automation für unterstützte öffentliche Formulare.
 
-**Version 0.3.0** · Python-Paket mit der CLI **job-agent** · Lizenz: [AGPL-3.0-only](LICENSE)
+**Version 0.3.1** · Python-Paket mit der CLI **job-agent** · Lizenz: [AGPL-3.0-only](LICENSE)
 
 > Der Agent ist kein Massenbewerbungswerkzeug. Jede Bewerbung bleibt an eine konkrete, lokale Freigabe gebunden. Login, MFA, CAPTCHA, neue sensible Angaben und mehrdeutige Formularschritte führen nicht zu einem Submit.
 
@@ -27,6 +27,7 @@ Ein lokaler, kontrollierter Bewerbungsagent für die öffentliche Stellensuche i
 - [Manuelle Nachbearbeitung](#manuelle-nachbearbeitung)
 - [Projektstruktur und Ausgaben](#projektstruktur-und-ausgaben)
 - [Tests und Entwicklung](#tests-und-entwicklung)
+- [Sicher veröffentlichen](#sicher-veröffentlichen)
 - [Versionierung](#versionierung)
 - [Mitwirken und Sicherheit](#mitwirken-und-sicherheit)
 - [Troubleshooting](#troubleshooting)
@@ -89,7 +90,9 @@ Das Projekt befindet sich in einer öffentlichen **Beta-Phase**. Suche, Paketgen
 - .job-agent/, .env, .env.local, Run-Artefakte und Tracker sind git-ignoriert.
 - Die versionierten Dateien in config/ sind ausschließlich PII-freie Vorlagen.
 - doctor prüft lokale Bereitschaft, ohne Secrets oder Policy-Inhalte auszugeben.
-- Die CI führt vor Tests einen Public-Repository-Guard gegen private Pfade, persönliche Dokumenttypen, lokale Benutzerpfade und nicht freigegebene E-Mail-Adressen aus.
+- Die CI liest den exakten Git-Baum und die erreichbare Historie. Sie blockiert private Pfade, persönliche oder undurchsichtige Binärdateien, ausgeführte Notebook-Ausgaben, lokale Benutzerpfade, echte E-Mail-Domains und typische Secret-Formate.
+- Das interaktive Setup erzeugt zusätzlich `.job-agent/privacy/blocklist.txt` mit lokalen Identitäts-Tripwires. Treffer werden gemeldet, aber niemals im Log ausgegeben.
+- `job-agent init` aktiviert im Source-Checkout den versionierten Pre-Push-Hook. Er prüft jeden konkret zu pushenden Commit einschließlich Historie, bevor Git Daten an den Remote sendet.
 - Ein Approval-Manifest bindet Job, Formularplan, Recherche und Upload-Dokumente über Fingerprints. Bei Änderungen stoppt apply-approved vor dem Browserstart.
 - Der Humanizer liegt lokal unter .job-agent/humanizer/. Die optionale öffentliche Baseline wird nur auf ausdrücklichen Befehl, Commit-gepinnt und mit Hash-Lock gespeichert.
 
@@ -467,6 +470,36 @@ Nur der Browser-Smoke-Test:
 uv run pytest tests/test_browser_apply.py::test_local_browser_fixture_captures_final_submit_evidence
 ~~~
 
+## Sicher veröffentlichen
+
+Ein normaler Testlauf reicht für einen öffentlichen Push oder ein Release nicht aus. Das Repository besitzt deshalb einen verpflichtenden, fail-closed Veröffentlichungs-Audit:
+
+~~~bash
+uv run job-agent init
+uv run python scripts/prepublish_audit.py
+~~~
+
+Der Befehl verlangt einen committed und sauberen Arbeitsbaum sowie mindestens zwei private Identitäts-Tripwires unter `.job-agent/privacy/blocklist.txt`. Er prüft den exakten `HEAD`, alle erreichbaren Commits und Commit-Metadaten, Dateipfade und -inhalte, Notebook-Ausgaben, Dokumente, Archive, unbekannte Binärdateien, typische Secrets, Ruff, Pyright, alle Tests und den Inhalt der gebauten Wheel-/sdist-Artefakte. Fundwerte werden nie ausgegeben.
+
+Werden mehrere Branches oder Tags auf einmal veröffentlicht, ist die strengere Variante Pflicht:
+
+~~~bash
+uv run python scripts/prepublish_audit.py --all-local-refs
+~~~
+
+Nach dem Push wird nicht der lokale Clone, sondern ein frischer anonymer Mirror der tatsächlich öffentlichen GitHub-Refs geprüft:
+
+~~~bash
+uv run python scripts/prepublish_audit.py \
+  --remote-only \
+  --remote-url https://github.com/OWNER/REPOSITORY.git \
+  --github-repo OWNER/REPOSITORY
+~~~
+
+Mit `--github-repo` werden zusätzlich Repository-Metadaten, Issues, Kommentare, Pull-Request-Reviews, Actions-Logs und -Artefakte sowie Release-Dateien geprüft.
+
+Die technische Ursache der früheren Schutzlücke, der vollständige Prüfumfang und das Vorgehen bei einem Fund stehen in [docs/publication-safety.md](docs/publication-safety.md).
+
 ## Versionierung
 
 Dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/):
@@ -482,15 +515,12 @@ pyproject.toml
 job_application_agent/__init__.py
 ~~~
 
-### Aktuelle Version: 0.3.0
+### Aktuelle Version: 0.3.1
 
-- Portables, interaktives lokales Setup für Profil, Suchkriterien und Dokumentpfade.
-- Keine versionierten persönlichen Such- oder Karrierepräferenzen.
-- Öffentliche Arbeitsagentur-Suche statt des fehleranfälligen alten Backend-Endpunkts.
-- Separate Liste für manuelle Nachbearbeitung mit needs-completion.
-- Privater, faktischer CV-Generator mit Markdown-, JSON- und minimalistischem PDF-Export.
-- Optionales, lokales PDF-Bündel für ausdrücklich angegebene Zeugnisse und Zertifikate.
-- Approval- und Browser-Grenzen bleiben unverändert fail-closed.
+- Tiefenprüfung des exakten Git-Baums und seiner erreichbaren Historie.
+- Lokale, automatisch abgeleitete Identitäts-Sperrliste ohne Ausgabe der Fundwerte.
+- Release-Artefakt- und anonymer Remote-Mirror-Audit.
+- CI-Regressionstests für PII, Secrets, Notebooks, Binärdateien und gelöschte historische Leaks.
 
 ## Erweiterungen
 
