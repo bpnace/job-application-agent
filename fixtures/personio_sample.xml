@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workzag-jobs>
+  <position>
+    <name>Junior AI Automation Engineer</name>
+    <office>Berlin</office>
+    <subcompany>Example Automation GmbH</subcompany>
+    <employmentType>permanent</employmentType>
+    <jobDescriptions>
+      <jobDescription>
+        <name>Aufgaben</name>
+        <value>Wir suchen Unterstützung für n8n Workflows, LLM APIs, React Dashboards und interne Prozessautomatisierung.</value>
+      </jobDescription>
+    </jobDescriptions>
+  </position>
+  <position>
+    <name>SAP Consultant</name>
+    <office>Remote</office>
+    <subcompany>Example Automation GmbH</subcompany>
+    <employmentType>permanent</employmentType>
+    <jobDescriptions>
+      <jobDescription>
+        <name>Aufgaben</name>
+        <value>SAP S/4HANA Beratung und Rollout.</value>
+      </jobDescription>
+    </jobDescriptions>
+  </position>
+</workzag-jobs>

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Local Personio step fixture</title></head>
+  <body>
+    <form id="first-step">
+      <label for="name">Full name</label>
+      <input id="name" required>
+      <button id="next" type="button" onclick="showSecondStep()">Continue</button>
+    </form>
+    <script>
+      function showSecondStep() {
+        document.body.innerHTML = `
+          <form id="second-step" onsubmit="submitApplication(event)">
+            <label for="email">Email</label>
+            <input id="email" type="email" required>
+            <button type="submit">Submit application</button>
+          </form>`;
+      }
+      function submitApplication(event) {
+        event.preventDefault();
+        document.body.innerHTML = '<main><h1>Thank you for applying</h1><p>Your application was submitted.</p></main>';
+      }
+    </script>
+  </body>
+</html>

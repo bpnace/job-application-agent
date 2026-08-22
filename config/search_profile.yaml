@@ -1,0 +1,93 @@
+# Versioned, PII-free starter profile. `job-agent init --interactive` copies
+# and personalises it into .job-agent/search_profile.yaml, which is ignored.
+search:
+  market: Deutschland
+  profile_configured: false
+  target_roles: []
+  keywords: []
+  hard_exclusions:
+    - Praktikum
+    - Werkstudent
+    - Internship
+  employer_blacklist: []
+  preferred_locations: []
+  required_location_terms: []
+  allow_unknown_location: true
+  max_listing_age_days: 21
+  fresh_listing_boost_days: 7
+  allow_unknown_date: true
+  top_n: 20
+  max_candidates: 250
+  host_delay_seconds: 0.5
+
+sources:
+  # Queries and portal URLs are generated from the initial setup answers.
+  public_search:
+    enabled: true
+    provider: serpapi_google
+    mode: always
+    booster_threshold: 20
+    max_candidates: 80
+    max_queries: 12
+    location: Deutschland
+    gl: de
+    hl: de
+    google_domain: google.de
+    queries: []
+  arbeitnow:
+    enabled: true
+    endpoint: https://www.arbeitnow.com/api/job-board-api
+    max_candidates: 50
+  # This uses the public BA jobsuche page, not the unstable private pc/v4 API.
+  arbeitsagentur:
+    enabled: true
+    max_candidates: 80
+    radius_km: 50
+    page_size: 25
+    max_pages: 2
+    locations: []
+    queries: []
+  stepstone:
+    enabled: true
+    max_candidates: 70
+    urls: []
+  linkedin:
+    enabled: true
+    max_candidates: 70
+    urls: []
+  freelancermap:
+    enabled: true
+    max_candidates: 25
+    urls:
+      - https://www.freelancermap.com/projects/remote
+  remoteok:
+    enabled: true
+    endpoint: https://remoteok.com/api
+    max_candidates: 30
+    include_terms: []
+  remotive:
+    enabled: true
+    endpoint: https://remotive.com/api/remote-jobs
+    max_candidates: 30
+    queries: []
+  public_job_boards:
+    enabled: true
+    max_candidates: 80
+    per_board_limit: 10
+    boards:
+      - name: get-in-it
+        url: https://www.get-in-it.de/jobsuche
+      - name: DEVjobs.de
+        url: https://devjobs.de/jobs
+      - name: Heise Jobs
+        url: https://jobs.heise.de/
+      - name: Golem Jobs
+        url: https://jobs.golem.de/
+      - name: Workwise
+        url: https://www.workwise.io/jobsuche
+      - name: GermanTechJobs
+        url: https://germantechjobs.de/
+  # Optional dependency; off unless a user explicitly enables it locally.
+  scrapling_public_job_boards:
+    enabled: false
+    boards: []

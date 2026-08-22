@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="{{ language }}">
+<head>
+  <meta charset="utf-8">
+  <title>{{ title }}</title>
+  <style>
+    @page { size: A4; margin: 19mm 23mm 17mm; }
+    * { box-sizing: border-box; }
+    body {
+      color: #2c2723;
+      background: #fcf9f4;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 10.1pt;
+      line-height: 1.55;
+      margin: 0;
+    }
+    .sheet { min-height: 262mm; }
+    .identity {
+      position: relative;
+      min-height: 44mm;
+      border-bottom: 0.8pt solid {{ accent_color }};
+    }
+    .document-kind {
+      color: {{ accent_color }};
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 7.2pt;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      margin: 0;
+      padding-top: 0;
+    }
+    h1 {
+      color: #2c2723;
+      font-size: 23pt;
+      line-height: 1.1;
+      margin: 0;
+      padding-top: 3mm;
+    }
+    .role {
+      color: #716861;
+      font-size: 10.6pt;
+      font-style: italic;
+      margin: 2.6mm 0 0;
+      max-width: 105mm;
+    }
+    .contact {
+      color: #716861;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8pt;
+      line-height: 1.5;
+      position: absolute;
+      right: 0;
+      text-align: right;
+      top: 7mm;
+    }
+    .meta {
+      color: #716861;
+      display: grid;
+      font-size: 10pt;
+      grid-template-columns: 1fr auto;
+      margin-top: 9mm;
+      min-height: 33mm;
+      padding-top: 0;
+    }
+    .recipient::before {
+      color: {{ accent_color }};
+      content: "AN";
+      display: block;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 7pt;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      margin-bottom: 3mm;
+    }
+    .recipient, .date { margin: 0; }
+    .date { text-align: right; }
+    main { margin-top: 5mm; }
+    h2 {
+      color: {{ accent_color }};
+      font-size: 12.4pt;
+      font-weight: 700;
+      line-height: 1.2;
+      margin: 0 0 8mm;
+    }
+    p { margin: 0 0 5.2mm; }
+    a { color: #2c2723; text-decoration: none; }
+    footer {
+      border-top: 0.45pt solid #cfc5bb;
+      bottom: 8mm;
+      color: #716861;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 7.1pt;
+      left: 23mm;
+      position: fixed;
+      right: 23mm;
+    }
+    footer span:last-child { float: right; }
+  </style>
+</head>
+<body>
+  <section class="sheet">
+    <header class="identity">
+      <p class="document-kind">BEWERBUNG</p>
+      <h1>{{ candidate_name }}</h1>
+      {% if candidate_role %}<p class="role">{{ candidate_role }}</p>{% endif %}
+      {% if candidate_contact %}<div class="contact">{% for item in candidate_contact %}{{ item }}{% if not loop.last %}<br>{% endif %}{% endfor %}</div>{% endif %}
+    </header>
+    <section class="meta">
+      <p class="recipient">{{ listing_company }}<br>Recruiting Team</p>
+      <p class="date">{{ letter_date }}</p>
+    </section>
+    <main>{{ body_html | safe }}</main>
+  </section>
+  <footer><span>Anschreiben</span><span>1</span></footer>
+</body>
+</html>

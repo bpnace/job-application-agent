@@ -1,0 +1,46 @@
+# Copy this with `job-agent init`; the resulting .job-agent/candidate.yaml is
+# intentionally ignored. Keep real personal data and document paths there.
+profile:
+  name: "Your Name"
+  email: "you@example.com"
+  location: "Your city, country"
+  phone: ""
+  address: ""
+  street_address: ""
+  postal_code: ""
+  city: ""
+  country: "Germany"
+  github: "https://github.com/your-account"
+  linkedin: "https://www.linkedin.com/in/your-profile"
+  summary: "Short, factual professional summary."
+  core_skills:
+    - "Skill"
+  proof_points:
+    - "Evidence-backed achievement"
+  standard_application_answers: {}
+
+documents:
+  # Paths are relative to .job-agent/candidate.yaml unless absolute.
+  cv_text_path: "documents/cv.txt"
+  cv_pdf_path: "documents/cv.pdf"
+
+humanizer:
+  # This private policy lives only in .job-agent and is not tracked.
+  # JOB_AGENT_HUMANIZER_PATH can override this path on a machine.
+  private_policy_path: "humanizer/private.de.md"
+
+# Optional structured data for `job-agent resume render`. The command creates
+# a factual, minimal CV PDF plus Markdown and JSON source files locally. It
+# never invents roles, qualifications or certificate information.
+resume:
+  accent_color: "#7A3E38"
+  headline: ""
+  summary: ""
+  experience: []
+  education: []
+  skill_groups: []
+  languages: []
+  certificates: []
+  # Attachments remain separate source documents. `--include-attachments`
+  # can create a PDF bundle from listed PDF files; it never uploads them.
+  attachments: []

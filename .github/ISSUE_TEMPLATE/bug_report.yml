@@ -1,0 +1,49 @@
+name: Fehlerbericht
+description: Reproduzierbaren Fehler ohne persönliche Daten melden
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bitte keine Kandidatendaten, Zugangsdaten, Lebensläufe oder vollständigen Portalantworten einfügen. Sicherheitsprobleme gehören in eine private Security Advisory.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: v0.3.0
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      options:
+        - Setup oder Doctor
+        - Stellensuche
+        - Dokumenterstellung
+        - Browser-Automation
+        - Freigaben und Tracker
+        - Sonstiges
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung
+      description: Was ist passiert und was wurde erwartet?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduktion
+      description: Nutze nach Möglichkeit lokale Fixtures und redigierte Ausgaben.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Zusätzliche Diagnose
+      description: Relevante, bereinigte Ausgabe von job-agent doctor oder Tests.

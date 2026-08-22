@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Local application fixture</title></head>
+  <body>
+    <form id="application-form" onsubmit="event.preventDefault(); document.body.innerHTML = '<main><h1>Thank you for applying</h1><p>Your application was submitted.</p></main>'">
+      <label for="name">Full name</label>
+      <input id="name" name="name" required>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" required>
+      <button type="submit">Submit application</button>
+    </form>
+  </body>
+</html>

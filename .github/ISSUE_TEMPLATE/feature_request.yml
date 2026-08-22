@@ -1,0 +1,27 @@
+name: Funktionsvorschlag
+description: Kontrollierte Erweiterung vorschlagen
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Welches konkrete Problem soll gelöst werden?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Vorschlag
+      description: Wie könnte eine sichere, prüfbare Lösung aussehen?
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Datenschutz und Sicherheitsgrenzen
+      description: Welche Daten, Portale oder Submit-Grenzen sind betroffen?
+    validations:
+      required: true
